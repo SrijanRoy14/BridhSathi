@@ -126,8 +126,21 @@
         cameraFeed.src = "data:image/jpeg;base64," + event.data;
         let received = "Done";
 
-        //console.log(received);
-        //console.log(typeof event);
+        try {
+          const data = JSON.parse(event.data);
+          //console.log(data.action);
+          //console.log(received);
+          //console.log(typeof event);
+          if (String(data.action) === "DB_Latest") {
+            console.log(data.captured_image);
+            perpimg = document.createElement("img");
+            perpimg.src = String(data.captured_image);
+            capturecontainer.appendChild(perpimg);
+          }
+        } catch {
+          console.error();
+        }
+
         if (String(event.data) === "Done") {
           console.log("received!");
           capturedone = true;

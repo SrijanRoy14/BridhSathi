@@ -3,7 +3,7 @@ from channels.generic.websocket import WebsocketConsumer,AsyncWebsocketConsumer
 import cv2
 import base64
 import asyncio
-from asgiref.sync import async_to_sync
+from asgiref.sync import async_to_sync,sync_to_async
 from channels.layers import get_channel_layer
 from django.shortcuts import render
 from datetime import datetime
@@ -14,6 +14,10 @@ from oldhelper.models import *
 from django.contrib.auth.models import User
 from twilio.rest import Client
 from dotenv import load_dotenv
+from django.core.files import File
+#from geopy.geocoders import Nominatim
+import geocoder
+
 
 load_dotenv()
 
@@ -60,11 +64,17 @@ class feedfront(WebsocketConsumer):
 class VideoConsumer(AsyncWebsocketConsumer):
     API_KEY = os.getenv("account_sid")
     API_SECRET = os.getenv("auth_token")
+    dirfordb=None
+    
 
+    
     prediction_labels="fine danger stolen call".split(' ')
     user=None
     async def connect(self):
         await self.accept()
+        
+        self.video_capture = cv2.VideoCapture(0)
+        self.is_streaming = False
 
         self.account_sid = self.API_KEY
         self.auth_token = self.API_SECRET
@@ -74,8 +84,10 @@ class VideoConsumer(AsyncWebsocketConsumer):
         self.room_group_name = 'esp32_group3'
         self.channel_name = self.channel_name
 
-        self.user=self.scope['user']
-        print(await self.perform_action("fine"))
+        #self.user=self.scope['user']
+        '''for pred in self.prediction_labels:
+            await self.perform_action(pred)'''
+        await self.perform_action("danger")
         await self.channel_layer.group_add(self.room_group_name, self.channel_name) # type: ignore
         print(f"VideoConsumer connected and joined group: {self.room_group_name}")
 
@@ -120,6 +132,8 @@ class VideoConsumer(AsyncWebsocketConsumer):
             #frame=cv2.flip(frame, 1)
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             cv2.imwrite(dir_name+f"/{label}_{newuuid}.jpeg",frame)
+            if label in self.prediction_labels:
+                self.dirfordb=dir_name+f"/{label}_{newuuid}.jpeg"
 
     async def capture_image(self,event,label,number):
         try:
@@ -148,8 +162,7 @@ class VideoConsumer(AsyncWebsocketConsumer):
     
 
     async def start_video(self, event):
-        self.video_capture = cv2.VideoCapture(0)
-        self.is_streaming = False  
+          
         print("Starting video stream")
         self.is_streaming = True  
         async def stream_video():
@@ -213,22 +226,72 @@ class VideoConsumer(AsyncWebsocketConsumer):
     async def perform_action(self,preddata):
         
 
-        if preddata =="fine":
-            #await self.save_action_to_db(self,preddata,None,None,None)
-            body="hey i am in danger!"
-            await self.send_message(body)
+        
+            try:
+                lat,long=(None,None) if preddata=='fine' else await self.get_lat_and_long()
+                print(lat)
+                body="Hey I am fine now!" if preddata =="fine" else ((f"hey i need you to {preddata}" if preddata=='call' else f'hey my things are {preddata}' if preddata=='stolen' else f"hey i am in {preddata}")+f"\r\nlocation: https://maps.google.com/?q={lat},{long}")
+                None if preddata=='fine' else await self.click_pic('C:/Users/SRIJAN/Dropbox/PC/Documents/Programing/Projects/iotfullstack/iotfullstack/media/perpetrators',preddata)
 
+                
+                #print(self.dirfordb)
+                await self.save_action_to_db(preddata,lat,long,self.dirfordb)
+                #body=f"hey i am in danger!\r\nlocation: https://maps.google.com/?q={lat},{long}"
+                #await self.send_message(body)
+                
+                latest_action=await self.show_latest()
+                await self.send_latest_action(latest_action)
+                
+                    
+                    
+                
+            except Exception as e:
+                print(e)
+
+    async def get_lat_and_long(self):
+        g = geocoder.ip('')  # Uses IP address to get location
+        #print(g)
+        latitude = g.latlng[0]
+        longitude = g.latlng[1]
+        
+        return latitude,longitude   
+    
     @database_sync_to_async
-    def save_action_to_db(self,preddata,lat,long,captured_image):
-       saveaction=SaveAction.objects.create(
-           created_by=None,
-           action=preddata,
-           lat=lat,
-           long=long,
-           captured_image=captured_image
-       )
-       saveaction.save()
-       return saveaction
+    def save_action_to_db(self,preddata,lat,long,captured_image_path):
+       #print(File(captured_image))
+        filename = os.path.basename(captured_image_path) if captured_image_path is not None else None
+        #print(captured_image_path,)
+        
+        if captured_image_path is not None:
+            with open(captured_image_path, 'rb') as img_file:
+                django_file = File(img_file, name=filename)
+        
+                #print(captured_image_path,type(django_file))
+                saveaction=SaveAction.objects.create(
+                    created_by=None,
+                    action=preddata,
+                    lat=lat,
+                    long=long,
+                    captured_image=django_file
+                )
+                saveaction.save()
+        else:
+            saveaction=SaveAction.objects.create(
+                    created_by=None,
+                    action=preddata,
+                    lat=lat,
+                    long=long,
+                    captured_image=None
+                )
+            saveaction.save()
+        
+        
+        
+            
+    @database_sync_to_async   
+    def show_latest(self):
+        return SaveAction.objects.latest('created_at')
+        #return SaveAction.objects.all().delete()
     
     @database_sync_to_async  
     def send_message(self,body):
@@ -239,4 +302,16 @@ class VideoConsumer(AsyncWebsocketConsumer):
             )
 
         print(message.sid)
+    
+    async def send_latest_action(self,latest_data):
+        data={
+            'action':"DB_Latest",
+           'user': latest_data.created_by if latest_data.created_by is not None else None,
+           'label':latest_data.action,
+            'lat':latest_data.lat if latest_data.lat is not None else None,
+            'long':latest_data.long if latest_data.long is not None else None,
+            'captured_image':latest_data.captured_image.url if latest_data.captured_image.url is not None else None
+        }
+        #print(data)
+        await self.send(json.dumps(data))
         
