@@ -99,6 +99,10 @@
   </head>
   <body>
     <h1>Camera Feed</h1>
+    <form method="POST" action="{% url 'logout' %}">
+      {% csrf_token %}
+      <button type="submit">Logout</button>
+    </form>
     <img id="cameraFeed" src="" alt="Camera Feed" />
 
     <div id="capturecontainer">
