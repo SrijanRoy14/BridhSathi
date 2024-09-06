@@ -1,0 +1,141 @@
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  height: 100vh;
+  margin: 0;
+  background-color: #f3f3f3;
+  font-family: Arial, sans-serif;
+}
+
+header {
+  width: 100%; /* Full width */
+  position: fixed;
+  top: 0;
+  left: 0; /* Align to the very left */
+  padding: 20px;
+  background-color: white;
+  text-align: right;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  display: flex;
+  justify-content: space-between; /* Distribute elements to left and right */
+  align-items: center;
+}
+
+.header-left {
+  margin-left: 20px; /* Space from left edge */
+}
+
+.header-right {
+  margin-right: 20px; /* Space from right edge */
+}
+
+button {
+  cursor: pointer;
+}
+
+h1 {
+  color: #333;
+  margin-top: 80px; /* Adds space to ensure the header doesn't overlap */
+  margin-bottom: 20px;
+}
+
+img {
+  width: 640px;
+  height: 480px;
+  border: 2px solid #007bff;
+  border-radius: 8px;
+  box-sizing: border-box;
+  margin-top: 20px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+#capturecontainer {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  gap: 20px; /* Adds space between the buttons */
+}
+
+.perpetrator-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 5px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  padding: 20px;
+  width: 100%;
+}
+
+.perpetrator-container h2 {
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.perpetrator-container img {
+  width: 200px;
+  height: 200px;
+  margin-bottom: 10px;
+  border-radius: 50%;
+}
+button {
+  padding: 10px 20px;
+  font-size: 16px;
+  border: none;
+  border-radius: 8px;
+  background-color: #007bff;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.3s, transform 0.2s;
+}
+
+button:hover {
+  background-color: #0056b3;
+  transform: translateY(-2px);
+}
+
+button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+input {
+  padding: 10px;
+  margin-bottom: 20px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  width: 300px;
+  font-size: 16px;
+}
+
+input:focus {
+  border-color: #007bff;
+  outline: none;
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+}
+
+.folder {
+  padding: 10px;
+  margin-bottom: 50px;
+}
+
+#folderlabel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  img {
+    width: 100%; /* Make the image responsive */
+    height: auto;
+  }
+
+  input {
+    width: 80%;
+  }
+}

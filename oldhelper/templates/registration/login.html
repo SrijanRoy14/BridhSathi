@@ -17,11 +17,15 @@
         {% endfor %} {% endfor %}
       </div>
       {% endif %}
-      <form method="POST">
-        {% csrf_token %} {{ form.as_table }}
-        <button type="submit">Login</button>
-      </form>
-      <a href="{% url 'authview' %}" class="nav-button">Sign Up</a>
+      <div class="test">
+        <form method="POST">
+          {% csrf_token %} {{ form.as_table }}
+          <button type="submit">Login</button>
+        </form>
+      </div>
+      <div class="butt">
+        <a href="{% url 'authview' %}" class="nav-button">Sign Up</a>
+      </div>
     </div>
   </body>
 </html>

@@ -7,4 +7,8 @@ urlpatterns = [
     path("lobby/", views.lobby, name="lobby"),
     path("feed/", views.video, name="video_feed"),
     path("incoming/", views.incoming, name="incoming"),
+    path("emer/ins/", views.emer_form, name="emer_insert"),
+    path("emer/li/", views.emer_list, name="emer_list"),
+    path("emer/ins/<int:id>/", views.emer_form, name="emer_update"),
+    path("emer/delete/<int:id>/", views.emer_delete, name="emer_delete"),
 ]  # type: ignore

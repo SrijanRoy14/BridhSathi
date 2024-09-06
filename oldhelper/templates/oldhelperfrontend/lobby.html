@@ -1,325 +1,43 @@
 <!DOCTYPE html>
+
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Camera Feed</title>
-    <style>
-      body {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        height: 100vh;
-        margin: 0;
-        background-color: #f3f3f3;
-        font-family: Arial, sans-serif;
-      }
-
-      h1 {
-        color: #333;
-        margin-bottom: 20px;
-      }
-
-      img {
-        width: 640px;
-        height: 480px;
-        border: 2px solid #007bff;
-        border-radius: 8px;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-      }
-
-      #capturecontainer {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        margin-top: 20px;
-      }
-
-      button {
-        margin-top: 20px;
-        padding: 10px 20px;
-        font-size: 16px;
-        border: none;
-        border-radius: 8px;
-        background-color: #007bff;
-        color: white;
-        cursor: pointer;
-        transition: background-color 0.3s, transform 0.2s;
-      }
-
-      button:hover {
-        background-color: #0056b3;
-        transform: translateY(-2px);
-      }
-
-      button:active {
-        transform: translateY(0);
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-      }
-
-      input {
-        padding: 10px;
-        margin-bottom: 20px; /* Adds space below each input */
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        width: 300px; /* Set a fixed width for inputs */
-        font-size: 16px;
-      }
-
-      input:focus {
-        border-color: #007bff;
-        outline: none;
-        box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
-      }
-
-      .folder {
-        padding: 10px;
-        margin-bottom: 50px; /* Adds space below each element */
-      }
-
-      #folderlabel {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-      }
-
-      /* Responsive design */
-      @media (max-width: 768px) {
-        img {
-          width: 100%; /* Make the image responsive */
-          height: auto; /* Maintain aspect ratio */
-        }
-
-        input {
-          width: 80%; /* Make inputs responsive */
-        }
-      }
-    </style>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'main/camerafeed.css' %}" />
   </head>
   <body>
-    <h1>Camera Feed</h1>
-    <form method="POST" action="{% url 'logout' %}">
-      {% csrf_token %}
-      <button type="submit">Logout</button>
-    </form>
-    <img id="cameraFeed" src="" alt="Camera Feed" />
+    <div id="headercontainer">
+      <header>
+        <div class="header-left">
+          <form method="POST" action="{% url 'logout' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger btn-sm">Logout</button>
+          </form>
+        </div>
+        <div class="header-right">
+          <a href="{% url 'emer_list' %}" class="nav-button"><button class="btn btn-danger btn-sm">Emergency Contacts</button></a>
+        </div>
+      </header>
+      </div>
+      <h1>Camera Feed</h1>
 
-    <div id="capturecontainer">
-      <button id="startStream">Start Stream</button>
+      <img id="cameraFeed" src="" alt="Camera Feed" />
+
+      <div id="capturecontainer">
+        <button id="startStream">Start Stream</button>
+      </div>
+
+      <div class="folder" id="folderlabel"></div>
+
+      <div class="perpetrator-container">
+        <h2>Captured Perpetrator</h2>
+        <div id="perpetrator-images"></div>
+      </div>
     </div>
-
-    <div class="folder" id="folderlabel"></div>
-
-    <script>
-      let CaptureButton,
-        CaptureMultiButton,
-        folder,
-        lable_input,
-        capturedone = false,
-        number,
-        startstopbutton,
-        responsetext;
-      const buttoncontainer = document.getElementById("capturecontainer");
-      const cameraFeed = document.getElementById("cameraFeed");
-      const socket = new WebSocket(
-        "ws://" + window.location.host + "/ws/video/"
-      );
-
-      socket.onmessage = function (event) {
-        cameraFeed.src = "data:image/jpeg;base64," + event.data;
-        let received = "Done";
-
-        try {
-          const data = JSON.parse(event.data);
-          //console.log(data.action);
-          //console.log(received);
-          //console.log(typeof event);
-          if (String(data.action) === "DB_Latest") {
-            console.log(data.captured_image);
-            perpimg = document.createElement("img");
-            perpimg.src = String(data.captured_image);
-            capturecontainer.appendChild(perpimg);
-          }
-        } catch {
-          console.error();
-        }
-
-        if (String(event.data) === "Done") {
-          console.log("received!");
-          capturedone = true;
-          //let startstopbutton = document.getElementById("startStream");
-          //addbyid("capturemultibutton", capturecontainer, CaptureMultiButton);
-          startstopbutton.style.visibility = "visible";
-          capturecontainer.removeChild(responsetext);
-          addbyid("startStream", capturecontainer, startstopbutton);
-          addbyid("capturemultibutton", capturecontainer, CaptureMultiButton);
-          capturecontainer.appendChild(CaptureButton);
-        }
-      };
-
-      socket.onclose = function (event) {
-        console.error("WebSocket closed unexpectedly");
-      };
-
-      // Function to send message to start the stream
-      function startStream() {
-        console.log("Here");
-        socket.send(JSON.stringify({ action: "start" }));
-      }
-
-      // Function to send message to stop the stream
-      function stopStream() {
-        if (socket.readyState === WebSocket.OPEN) {
-          socket.send(JSON.stringify({ action: "stop" }));
-          console.log("Stop stream command sent");
-        } else {
-          console.error(
-            "WebSocket is not open. Current state: " + socket.readyState
-          ); //if the socket is closed and we are trying to send message to a closed connection
-        }
-      }
-
-      function capturemulti() {
-        folder = document.createElement("form");
-        folder.id = "submitform";
-
-        lable_input = document.createElement("input");
-        lable_input.type = "text";
-        lable_input.name = "message";
-        lable_input.placeholder = "Enter folder name";
-        lable_input.required = true;
-        folder.appendChild(lable_input);
-
-        no_img = document.createElement("input");
-        no_img.type = "number";
-        no_img.name = "number";
-        no_img.min = "1";
-        no_img.max = "100";
-        no_img.required = true;
-        no_img.placeholder = "Enter The number of images";
-        folder.appendChild(no_img);
-
-        const submitButton = document.createElement("button");
-        submitButton.type = "submit";
-        submitButton.textContent = "Submit";
-        folder.appendChild(submitButton);
-
-        folderlabel.appendChild(folder);
-
-        folder.addEventListener("submit", function (event) {
-          event.preventDefault(); // Prevent the default form submission
-          const name = event.target.message.value; // Get the value from the input
-          number = event.target.number.value; // Get the value from the input
-
-          //console.log(no_img);
-          //console.log(event.target.message.value);
-          //console.log("Message submitted:", number, name);
-
-          socket.send(
-            JSON.stringify({
-              action: "capturemulti",
-              label: name,
-              number: number,
-            })
-          );
-          if (capturedone) {
-            console.log("affirmation recieved!");
-          }
-
-          responsetext = document.createTextNode(
-            "Please wait collecting your pictures"
-          );
-          capturecontainer.appendChild(responsetext);
-          //folderlabel.removeChild(folder);
-          startstopbutton = document.getElementById("startStream");
-          startstopbutton.style.visibility = "hidden";
-          //removebyid("startStream", capturecontainer);
-          removebyid("submitform", folderlabel);
-        });
-      }
-
-      function addcapturebutton() {
-        //function to dynamically append the "capture button" to the div-- yet to add the func
-        CaptureButton = document.createElement("button");
-        CaptureMultiButton = document.createElement("button");
-
-        CaptureButton.id = "capturebutton";
-        CaptureMultiButton.id = "capturemultibutton";
-
-        CaptureButton.textContent = "Capture";
-        CaptureMultiButton.textContent = "Capture Multi";
-
-        CaptureButton.addEventListener("click", () => {
-          console.log("Here in the new button i was");
-          socket.send(JSON.stringify({ action: "capture" }));
-        });
-
-        CaptureMultiButton.addEventListener("click", () => {
-          console.log("I am here in the multi capture button");
-          capturecontainer.removeChild(CaptureButton);
-          capturemulti();
-          removebyid("capturemultibutton", capturecontainer);
-
-          console.log("I am here after performing capture multi!");
-          //socket.send(JSON.stringify({'action': 'capture'}));
-        });
-
-        //capturecontainer.appendChild(CaptureButton);
-
-        addbyid("capturebutton", capturecontainer, CaptureButton);
-        addbyid("capturemultibutton", capturecontainer, CaptureMultiButton);
-
-        //capturecontainer.appendChild(CaptureMultiButton);
-      }
-
-      function removebyid(elemID, divlabel) {
-        const elemexists = document.getElementById(elemID);
-
-        if (elemexists && divlabel.contains(elemexists)) {
-          divlabel.removeChild(elemexists);
-          console.log(`Element with ID "${elemID}" removed.`);
-        } else {
-          console.log(`No Element with ID "${elemID}" found in formLabel.`);
-        }
-      }
-
-      function addbyid(elemID, divlabel, varname) {
-        const elemexists = document.getElementById(elemID);
-
-        if (elemexists && divlabel.contains(elemexists)) {
-          console.log(`Element found with ID "${elemID}" not added.`);
-        } else {
-          divlabel.appendChild(varname);
-          console.log(
-            `No Element with ID "${elemID}" found in "${divlabel}" added.`
-          );
-        }
-      }
-
-      let startcam = true;
-      // Event listener for "Start Stream" button
-      document
-        .getElementById("startStream")
-        .addEventListener("click", function (e) {
-          if (startcam) {
-            //toggle both button functionality and text on the basis of last action performed
-            e.preventDefault(); // Prevent default button behavior
-            document.getElementById("startStream").textContent = "Close Stream";
-            startStream(); // Start the stream
-            addcapturebutton();
-          } else {
-            e.preventDefault();
-            document.getElementById("startStream").textContent = "Start Stream";
-            stopStream();
-
-            removebyid("capturebutton", capturecontainer);
-            removebyid("capturemultibutton", capturecontainer);
-            removebyid("submitform", folderlabel);
-          }
-          startcam = !startcam; //toggle state
-        });
-    </script>
+    <script src="{% static 'main/camera.js' %}"></script>
 
     {% if response %}
     <p>{{ response }}</p>

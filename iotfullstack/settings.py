@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "oldhelper",
+    "crispy_forms",
 ]
 ASGI_APPLICATION = "iotfullstack.asgi.application"
 

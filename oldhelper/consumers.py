@@ -60,10 +60,16 @@ class VideoConsumer(AsyncWebsocketConsumer):
     prediction_labels = "fine danger stolen call".split(" ")
     user_id = None
 
+    async def initcamera(self):
+        self.video_capture = cv2.VideoCapture(0)
+        self.is_streaming = False
+
     async def connect(self):
+
         if self.scope["user"].is_authenticated:
             await self.accept()
 
+            await self.initcamera()
             self.video_capture = cv2.VideoCapture(0)
             self.is_streaming = False
 
@@ -79,7 +85,7 @@ class VideoConsumer(AsyncWebsocketConsumer):
             # self.user=self.scope['user']
             """for pred in self.prediction_labels:
                 await self.perform_action(pred)"""
-            # await self.perform_action("danger")
+            await self.perform_action("danger")
             await self.channel_layer.group_add(self.room_group_name, self.channel_name)  # type: ignore
             print(f"VideoConsumer connected and joined group: {self.room_group_name}")
 
@@ -160,6 +166,7 @@ class VideoConsumer(AsyncWebsocketConsumer):
 
     async def start_video(self, event):
 
+        await self.initcamera()
         print("Starting video stream")
         self.is_streaming = True
 
@@ -239,29 +246,31 @@ class VideoConsumer(AsyncWebsocketConsumer):
                 )
             )
             (
-                None
+                """None
                 if preddata == "fine"
                 else await self.click_pic(
                     "C:/Users/SRIJAN/Dropbox/PC/Documents/Programing/Projects/iotfullstack/iotfullstack/media/perpetrators",
                     preddata,
-                )
+                )"""
             )
 
             # print(self.dirfordb)
             # print(type(self.user))
 
             user = await self.get_user_by_id(self.user_id)
-            await self.save_action_to_db(user, preddata, lat, long, self.dirfordb)
+            # await self.save_action_to_db(user, preddata, lat, long, self.dirfordb)
             # os.remove(self.dirfordb)
-
-            await self.send_message(body)
+            # print(user)
+            emergency_contacts = await self.get_all_em_foruser(user)
+            # print(emergency_contyacts)
+            await self.send_message(body, emergency_contacts)
 
             # await self.delete_all()
-            data = await self.send_latest_action()
-            await self.send(json.dumps(data))
+            # data = await self.send_latest_action()
+            # await self.send(json.dumps(data))
 
         except Exception as e:
-            print(f"Some error occured{e}")
+            print(f"Some error occured {e}")
 
     async def get_lat_and_long(self):
         g = geocoder.ip("")  # Uses IP address to get location
@@ -312,10 +321,14 @@ class VideoConsumer(AsyncWebsocketConsumer):
         return SaveAction.objects.all().delete()
 
     @database_sync_to_async
-    def send_message(self, body):
-        message = self.client.messages.create(
-            from_="whatsapp:+14155238886", body=body, to="whatsapp:+919163437332"
-        )
+    def send_message(self, body, contacts):
+
+        for con in contacts:
+            message = self.client.messages.create(
+                from_="whatsapp:+14155238886",
+                body=body,
+                to=f"whatsapp:+91{con}",
+            )
 
         # print(message.sid)
 
@@ -340,6 +353,15 @@ class VideoConsumer(AsyncWebsocketConsumer):
     def get_user_by_id(self, user_id):
         try:
             user = User.objects.get(id=user_id)
+
             return user
         except User.DoesNotExist:
             return None
+
+    @database_sync_to_async
+    def get_all_em_foruser(self, user):
+        em = []
+        emer_contacts = EmergencyContact.objects.filter(user=user)
+        for emer in emer_contacts:
+            em.append(str(emer.phone_no))
+        return em

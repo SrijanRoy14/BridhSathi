@@ -8,7 +8,7 @@ from oldhelper.httpcamera import *
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.decorators import login_required
-from .forms import CustomUserForm
+from .forms import *
 from .models import *
 
 
@@ -23,6 +23,40 @@ def authview(request):
         form = CustomUserForm()
 
     return render(request, "registration/signup.html", {"form": form})
+
+
+@login_required(login_url="/auth/login/")
+def emer_list(request):
+    context = {"menu_list": EmergencyContact.objects.all()}
+    return render(request, "EmergencyContact/emer_list.html", context)
+
+
+@login_required(login_url="/auth/login/")
+def emer_form(request, id=0):
+
+    if request.method == "GET":
+        if id == 0:
+            form = emergencyform()
+        else:
+            cont_obj = EmergencyContact.objects.get(id=id, user=request.user)
+            form = emergencyform(instance=cont_obj)
+        return render(request, "EmergencyContact/emer_form.html", {"form": form})
+    else:
+        if id == 0:
+            form = emergencyform(request.POST)
+        else:
+            contacts = EmergencyContact.objects.get(pk=id, user=request.user)
+            form = emergencyform(request.POST, instance=contacts)
+        if form.is_valid():
+            form.save(user=request.user)
+        return redirect("emer_list")
+
+
+@login_required(login_url="/auth/login/")
+def emer_delete(request, id):
+    emer = EmergencyContact.objects.get(pk=id, user=request.user)
+    emer.delete()
+    return redirect("emer_list")
 
 
 @csrf_exempt
