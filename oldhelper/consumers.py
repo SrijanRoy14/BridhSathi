@@ -15,6 +15,8 @@ from django.contrib.auth.models import User
 from twilio.rest import Client
 from dotenv import load_dotenv
 from django.core.files import File
+from django.utils import timezone
+import time
 
 # from geopy.geocoders import Nominatim
 import geocoder
@@ -27,6 +29,7 @@ class feedfront(WebsocketConsumer):
 
     def connect(self):
         self.accept()
+
         self.send(text_data="hello esp32! we are connected ")
         self.room_group_name = "esp32_group2"
 
@@ -37,12 +40,15 @@ class feedfront(WebsocketConsumer):
 
     def send_frame(self, event):
         frame_data = event["frame_data"]
-        if frame_data is not None:
+
+        if frame_data is not None:  # type: ignore
             # print("receiving frame buffer")
             self.send(bytes_data=frame_data)
 
+            print("Frame sent at:", time.strftime("%H:%M:%S"))
+
     def receive(self, text_data=None, bytes_data=None):
-        # print(text_data)
+        print(text_data)
         if text_data is not None:
             async_to_sync(self.channel_layer.group_send)(  # type: ignore
                 "esp32_group3",
@@ -85,7 +91,8 @@ class VideoConsumer(AsyncWebsocketConsumer):
             # self.user=self.scope['user']
             """for pred in self.prediction_labels:
                 await self.perform_action(pred)"""
-            await self.perform_action("danger")
+            # await self.perform_action("danger")
+            # await self.delete_all()
             await self.channel_layer.group_add(self.room_group_name, self.channel_name)  # type: ignore
             print(f"VideoConsumer connected and joined group: {self.room_group_name}")
 
@@ -171,8 +178,10 @@ class VideoConsumer(AsyncWebsocketConsumer):
         self.is_streaming = True
 
         async def stream_video():
+            previous_time = time.time()
             while self.is_streaming:
                 # await asyncio.sleep(0.03)
+
                 success, frame = self.video_capture.read()
                 if not success:
                     print("Failed to read frame from camera")
@@ -187,14 +196,16 @@ class VideoConsumer(AsyncWebsocketConsumer):
                     esp32_frame = cv2.resize(frame, (96, 96))
                     gray_frame = cv2.cvtColor(esp32_frame, cv2.COLOR_BGR2GRAY)
                     data = gray_frame.flatten().tobytes()
-
-                    await self.channel_layer.group_send(  # type: ignore
-                        "esp32_group2",
-                        {
-                            "type": "send_frame",
-                            "frame_data": data,  # Send the frame as binary data
-                        },
-                    )
+                    current_time = time.time()
+                    if current_time - previous_time >= 15:
+                        await self.channel_layer.group_send(  # type: ignore
+                            "esp32_group2",
+                            {
+                                "type": "send_frame",
+                                "frame_data": data,  # Send the frame as binary data
+                            },
+                        )
+                        previous_time = current_time
                     await asyncio.sleep(0.03)
                 except Exception as e:
                     print(f"Error sending frame: {e}")
@@ -207,10 +218,12 @@ class VideoConsumer(AsyncWebsocketConsumer):
     async def pred_res(self, event):
         # print(event)
         preddata = event["data"]
-
-        if preddata is not None:
-            preddata = self.prediction_labels[int(preddata)]
-            await self.perform_action(preddata)
+        try:
+            if preddata is not None:
+                pred = self.prediction_labels[int(preddata)]
+                await self.perform_action(pred)  # type: ignore
+        except Exception as e:
+            print(f"Error occured while performing label action {e}")
 
     async def stop_video(self, event):
         print("Stopping video stream")
@@ -225,10 +238,10 @@ class VideoConsumer(AsyncWebsocketConsumer):
 
     async def perform_action(self, preddata):
         try:
-            lat, long = (
-                (None, None) if preddata == "fine" else await self.get_lat_and_long()  # type: ignore
-            )
+            lat, long = await self.get_lat_and_long()  # type: ignore
             # print(lat)
+            location_url = f"https://maps.google.com/?q={lat},{long}"
+            # print(location_url)
             body = (
                 "Hey I am fine now!"
                 if preddata == "fine"
@@ -242,32 +255,41 @@ class VideoConsumer(AsyncWebsocketConsumer):
                             else f"hey i am in {preddata}"
                         )
                     )
-                    + f"\r\nlocation: https://maps.google.com/?q={lat},{long}"
+                    + f"\r\nlocation: {location_url}"
                 )
             )
             (
-                """None
+                None
                 if preddata == "fine"
                 else await self.click_pic(
                     "C:/Users/SRIJAN/Dropbox/PC/Documents/Programing/Projects/iotfullstack/iotfullstack/media/perpetrators",
                     preddata,
-                )"""
+                )
             )
 
             # print(self.dirfordb)
             # print(type(self.user))
 
             user = await self.get_user_by_id(self.user_id)
-            # await self.save_action_to_db(user, preddata, lat, long, self.dirfordb)
-            # os.remove(self.dirfordb)
+            try:
+                await self.save_action_to_db(
+                    user, preddata, lat, long, location_url, self.dirfordb
+                )
+            except Exception as e:
+                print(f"Some error occured while saving to db {e}")
+
+            os.remove(self.dirfordb) if os.path.exists(self.dirfordb) else print("The file doesnt exist!")  # type: ignore
             # print(user)
             emergency_contacts = await self.get_all_em_foruser(user)
-            # print(emergency_contyacts)
+            # print(emergency_contacts)
             await self.send_message(body, emergency_contacts)
 
             # await self.delete_all()
-            # data = await self.send_latest_action()
-            # await self.send(json.dumps(data))
+            try:
+                data = await self.send_latest_action()
+                await self.send(json.dumps(data))
+            except Exception as e:
+                print(f"Some error occured while fetching latest data {e}")
 
         except Exception as e:
             print(f"Some error occured {e}")
@@ -281,7 +303,9 @@ class VideoConsumer(AsyncWebsocketConsumer):
         return latitude, longitude
 
     @database_sync_to_async
-    def save_action_to_db(self, user, preddata, lat, long, captured_image_path):
+    def save_action_to_db(
+        self, user, preddata, lat, long, location_url, captured_image_path
+    ):
         # print(File(captured_image))
         filename = (
             os.path.basename(captured_image_path)
@@ -300,6 +324,7 @@ class VideoConsumer(AsyncWebsocketConsumer):
                         action=preddata,
                         lat=lat,
                         long=long,
+                        location=location_url,
                         captured_image=django_file,
                     )
                     saveaction.save()
@@ -310,6 +335,7 @@ class VideoConsumer(AsyncWebsocketConsumer):
                     lat=lat,
                     long=long,
                     captured_image=None,
+                    location=location_url,
                 )
                 saveaction.save()
         except Exception as e:
@@ -335,17 +361,20 @@ class VideoConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def send_latest_action(self):
         latest_data = SaveAction.objects.latest("created_at")
+        # print(latest_data.location)
+        image = None
+        if latest_data.captured_image:
+            image = latest_data.captured_image.url
+
         data = {
             "action": "DB_Latest",
             "user": (self.scope["user"].username),
             "label": latest_data.action,
             "lat": latest_data.lat if latest_data.lat is not None else None,
             "long": latest_data.long if latest_data.long is not None else None,
-            "captured_image": (
-                latest_data.captured_image.url
-                if latest_data.captured_image.url is not None
-                else None
-            ),
+            "captured_image": image,
+            "location": latest_data.location,
+            "created_at": str(latest_data.created_at.strftime("%d-%m-%Y %H:%M:%S")),
         }
         return data
 

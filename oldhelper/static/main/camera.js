@@ -5,22 +5,75 @@ let CaptureButton,
   capturedone = false,
   number,
   startstopbutton,
+  emer,pred,
   responsetext;
 const buttoncontainer = document.getElementById("capturecontainer");
 const cameraFeed = document.getElementById("cameraFeed");
 const perpImagesContainer = document.getElementById("perpetrator-images");
 const socket = new WebSocket("ws://" + window.location.host + "/ws/video/");
+const mainbody=document.getElementById("mainbody");
+const perpresponsecontainer=document.getElementById("perpresponsecontainer");
+cameraFeed.style.display = 'none';
 
 socket.onmessage = function (event) {
+  try{
   cameraFeed.src = "data:image/jpeg;base64," + event.data;
+  }
+  catch{
+    console.error();
+  }
 
   try {
     const data = JSON.parse(event.data);
+    console.log(event.data);
     if (String(data.action) === "DB_Latest") {
-      console.log(data.captured_image);
+      
+      removebyid("perpimage", perpImagesContainer);
+      removebyid("perpresponse", perpresponsecontainer);
+      removebyid("imagecaption",perpImagesContainer);
+
+      //perpImagesContainer.removeChild(perpresponse);
+      let labeldata;
+      const label = String(data.label);
+      if (label==="fine") 
+        {labeldata="Hey I am fine now!";}
+      
+      else if(label==="danger") {labeldata="Hey I am in danger, need help!!!";}
+      else if(label==='stolen'){labeldata="Hey some things are stolen!!";}
+      else{labeldata="Hey I need you to call!";}
+
+      
+
+      
+      const perpresponse = document.createElement("h3");
+      const imagecaption = document.createElement("h4");
       const perpImg = document.createElement("img");
-      perpImg.src = String(data.captured_image);
-      perpImagesContainer.appendChild(perpImg);
+      perpresponse.textContent = labeldata;
+      perpImg.id = "perpimage";
+      perpresponse.id = "perpresponse";
+      imagecaption.id="imagecaption";
+
+      perpresponsecontainer.appendChild(perpresponse);
+      if (label==='danger' || label==="stolen") 
+        {
+          console.log(label);
+          
+          var created_at=String(data.created_at);
+
+          const link = document.createElement("a");
+          link.href = String(data.location);//"https://maps.google.com/?q=" + lat + "," + long;
+          link.textContent = "Location";
+
+
+          const body = document.createTextNode("The image was taken at " + created_at+" " );
+          imagecaption.appendChild(body);
+          imagecaption.appendChild(link);
+
+          perpImg.src = String(data.captured_image);
+          perpImg.caption = "This is the last captured image";
+          perpImagesContainer.appendChild(perpImg);
+          perpImagesContainer.appendChild(imagecaption);
+      }
     }
   } catch {
     console.error();
@@ -32,6 +85,8 @@ socket.onmessage = function (event) {
     //let startstopbutton = document.getElementById("startStream");
     //addbyid("capturemultibutton", capturecontainer, CaptureMultiButton);
     startstopbutton.style.visibility = "visible";
+    emer.style.visibility = "visible";
+    pred.style.visibility = "visible";
     capturecontainer.removeChild(responsetext);
     addbyid("startStream", capturecontainer, startstopbutton);
     addbyid("capturemultibutton", capturecontainer, CaptureMultiButton);
@@ -46,6 +101,7 @@ socket.onclose = function (event) {
 // Function to send message to start the stream
 function startStream() {
   console.log("Here");
+  cameraFeed.style.display = 'block';
   socket.send(JSON.stringify({ action: "start" }));
 }
 
@@ -53,6 +109,7 @@ function startStream() {
 function stopStream() {
   if (socket.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify({ action: "stop" }));
+    cameraFeed.style.display = 'none';
     console.log("Stop stream command sent");
   } else {
     console.error("WebSocket is not open. Current state: " + socket.readyState); //if the socket is closed and we are trying to send message to a closed connection
@@ -112,7 +169,11 @@ function capturemulti() {
     capturecontainer.appendChild(responsetext);
     //folderlabel.removeChild(folder);
     startstopbutton = document.getElementById("startStream");
+    emer = document.getElementById("emer");
+    pred = document.getElementById("pred");
     startstopbutton.style.visibility = "hidden";
+    emer.style.visibility = "hidden";
+    pred.style.visibility = "hidden";
     //removebyid("startStream", capturecontainer);
     removebyid("submitform", folderlabel);
   });

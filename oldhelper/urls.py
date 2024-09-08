@@ -11,4 +11,6 @@ urlpatterns = [
     path("emer/li/", views.emer_list, name="emer_list"),
     path("emer/ins/<int:id>/", views.emer_form, name="emer_update"),
     path("emer/delete/<int:id>/", views.emer_delete, name="emer_delete"),
+    path("pred/li/", views.pred_list, name="pred_list"),
+    path("pred/delete/<int:id>/", views.pred_delete, name="pred_delete"),
 ]  # type: ignore

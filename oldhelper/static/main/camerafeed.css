@@ -38,7 +38,7 @@ button {
 
 h1 {
   color: #333;
-  margin-top: 80px; /* Adds space to ensure the header doesn't overlap */
+  margin-top: 120px; /* Adds space to ensure the header doesn't overlap */
   margin-bottom: 20px;
 }
 
@@ -52,27 +52,45 @@ img {
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
 }
 
+#perpresponsecontainer {
+  display: flex;
+  justify-content: center;  /* Center horizontally */
+  align-items: center;      /* Center vertically */
+  flex-direction: column;   /* Stack elements vertically */
+  width: 100%;              /* Take full width of the container */
+  margin-top: 20px;
+}
+
+#perpresponse {
+  width: 100%;
+  text-align: center;        /* Center the text in the h2 element */
+  margin-top: 20px;          /* Add space between the buttons and the h2 */
+}
+
 #capturecontainer {
   margin-top: 20px;
   display: flex;
   justify-content: center;
-  gap: 20px; /* Adds space between the buttons */
+  gap: 20px; /* Adds space between buttons */
+  flex-wrap: wrap;
 }
 
 .perpetrator-container {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: center;  /* This centers items horizontally within the container */
   margin-top: 5px;
   border: 2px solid #ddd;
   border-radius: 8px;
   padding: 20px;
   width: 100%;
+  justify-content: center; /* Centers items vertically if needed */
 }
 
 .perpetrator-container h2 {
   margin-bottom: 20px;
   color: #333;
+  text-align: center; /* Ensures the heading text is centered */
 }
 
 .perpetrator-container img {
@@ -80,7 +98,11 @@ img {
   height: 200px;
   margin-bottom: 10px;
   border-radius: 50%;
+  display: block; /* Ensures the image behaves as a block-level element */
+  margin-left: auto;
+  margin-right: auto; /* This centers the image inside the container */
 }
+
 button {
   padding: 10px 20px;
   font-size: 16px;

@@ -31,6 +31,7 @@ ALLOWED_HOSTS = [
     "localhost",
     "127.0.0.1",
     "8f81-202-8-113-230.ngrok-free.app",
+    "194a-202-8-113-230.ngrok-free.app",
 ]
 
 
@@ -118,11 +119,12 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "Asia/Kolkata"
 
-USE_I18N = True
 
 USE_TZ = True
+USE_I18N = True
+USE_L10N = True
 
 
 # Static files (CSS, JavaScript, Images)
@@ -142,3 +144,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # LOGIN_URL = "/auth/ login/"
 LOGIN_REDIRECT_URL = "/lobby/"
 LOGOUT_REDIRECT_URL = "/auth/login/"
+
+# settings.py
+DATE_FORMAT = "%d-%m-%Y"  # e.g., 25-09-2024 for Day-Month-Year
+DATETIME_FORMAT = "%d-%m-%Y %H:%M:%S"

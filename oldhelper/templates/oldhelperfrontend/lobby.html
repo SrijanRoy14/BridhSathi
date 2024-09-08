@@ -4,11 +4,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Camera Feed</title>
+    <title>Esp32 Camera Feed</title>
     {% load static %}
     <link rel="stylesheet" href="{% static 'main/camerafeed.css' %}" />
   </head>
-  <body>
+  <body id="mainbody">
     <div id="headercontainer">
       <header>
         <div class="header-left">
@@ -17,23 +17,28 @@
             <button type="submit" class="btn btn-danger btn-sm">Logout</button>
           </form>
         </div>
+        
         <div class="header-right">
-          <a href="{% url 'emer_list' %}" class="nav-button"><button class="btn btn-danger btn-sm">Emergency Contacts</button></a>
+          <a href="{% url 'emer_list' %}" class="nav-button" id="emer"><button class="btn btn-danger btn-sm">Emergency Contacts</button></a>
+          <a href="{% url 'pred_list' %}" class="nav-button" id="pred"><button class="btn btn-danger btn-sm">Prediction Data</button></a>
         </div>
       </header>
       </div>
-      <h1>Camera Feed</h1>
+      <h1>Esp32 Camera Feed</h1>
 
       <img id="cameraFeed" src="" alt="Camera Feed" />
 
       <div id="capturecontainer">
         <button id="startStream">Start Stream</button>
       </div>
+      <div id="perpresponsecontainer">
+
+      </div>
 
       <div class="folder" id="folderlabel"></div>
 
       <div class="perpetrator-container">
-        <h2>Captured Perpetrator</h2>
+        <h2>Last Captured Image</h2>
         <div id="perpetrator-images"></div>
       </div>
     </div>

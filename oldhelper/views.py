@@ -26,8 +26,22 @@ def authview(request):
 
 
 @login_required(login_url="/auth/login/")
+def pred_list(request):
+    preds = SaveAction.objects.filter(created_by=request.user)
+    context = {"menu_list": preds}
+    return render(request, "Preds/pred_list.html", context)
+
+
+@login_required(login_url="/auth/login/")
+def pred_delete(request, id):
+    preds = SaveAction.objects.get(pk=id, created_by=request.user)
+    preds.delete()
+    return redirect("pred_list")
+
+
+@login_required(login_url="/auth/login/")
 def emer_list(request):
-    context = {"menu_list": EmergencyContact.objects.all()}
+    context = {"menu_list": EmergencyContact.objects.filter(user=request.user)}
     return render(request, "EmergencyContact/emer_list.html", context)
 
 
@@ -63,11 +77,13 @@ def emer_delete(request, id):
 def incoming(request):
     if request.method == "POST":
         # print(request.POST)
-        print(request.POST["Body"], request.POST["WaId"])
+        print(request.user)
 
         try:
             income = IncomingMessages.objects.create(
-                sender=f'+{request.POST["WaId"]}', content=request.POST["Body"]
+                user=request.user.id,
+                sender=f'+{request.POST["WaId"]}',
+                content=request.POST["Body"],
             )
             income.save()
         except Exception as e:
@@ -98,6 +114,7 @@ def lobby(request):
             return render(
                 request, "oldhelperfrontend/lobby.html", {"response": "Stream stopped"}
             )
+    pred_list(request)
     return render(request, "oldhelperfrontend/lobby.html")
 
 

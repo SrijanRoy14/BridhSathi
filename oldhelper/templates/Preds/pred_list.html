@@ -1,0 +1,49 @@
+{% extends "Preds/base.html" %} {% block content %}
+<table class="table table-borderless">
+  <thead class="border-bottom font-weight-bold">
+    <tr>
+      <td>User Name</td>
+      <td>Predicted Action</td>
+      <td>Captured Image</td>
+      <td>Location</td>
+      <td>Created_At</td>
+
+      
+    </tr>
+  </thead>
+  <tbody>
+    {% for menu in menu_list %}
+    <tr>
+      <td>{{menu.created_by}}</td>
+      <td>{{menu.action}}</td>
+      {%if menu.captured_image %}
+        <td><img class='rounded'src="{{menu.captured_image.url}}" width='150px' height="100px"></td>
+        {%else%}
+        <td></td>
+        {% endif %}
+        {%if menu.location %}
+        <td><a href={{menu.location}}>Location</a></td>
+        {%else%}
+        <td></td>
+        {% endif %}
+      <td>{{menu.created_at}}</td>
+
+      <td>
+        
+        <form
+          action="{% url 'pred_delete' menu.id %}"
+          method="post"
+          class="d-inline"
+        >
+          {% csrf_token %}
+          <button type="submit" class="btn">
+            <i class="far fa-trash-alt fa-lg text-danger float-right"></i>
+          </button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% endblock content %}
